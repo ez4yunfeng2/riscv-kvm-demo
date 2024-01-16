@@ -1,18 +1,10 @@
 #include "kvm.h"
 #include <stdio.h>
-#define pause getchar();
 
 static int sys_fd;
 static int vm_fd;
 static int vcpu_fd;
 struct kvm_run *runs;
-void console(int func, int arg) {
-    if( func == 0 ) {
-        printf("%c",arg);
-    } else {
-        printf("[Error] Bad Function ID\r\n");
-    }
-}
 
 void initram(void *ram) {
     struct kvm_userspace_memory_region mem = {
@@ -26,7 +18,6 @@ void initram(void *ram) {
     printf("KVM_SET_USER_MEMORY_REGION (%d)\r\n", ret);
 }
 
-// func readfile Open file and compute file size and Write it to buffer
 void readfile(char *filename, uint8_t *buffer) {
     int fd = open(filename, O_RDONLY);
     if( fd < 0 ) {
@@ -301,8 +292,7 @@ int main(void) {
 				break;
 		}
         // printf("Exit Reason: %d\r\n", runs->exit_reason);
-        // getchar();
+        // pause
     }
-
-    return 0;
+	__builtin_unreachable();
 }

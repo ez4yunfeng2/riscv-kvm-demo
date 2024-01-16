@@ -9,7 +9,7 @@
 #include <linux/kvm.h>
 #include <unistd.h>
 
-
+#define pause getchar();
 #define KVM_REG_RISCV		0x8000000000000000ULL
 static inline __u64 __kvm_reg_id(__u64 type, __u64 subtype,
 				__u64 idx, __u64  size)
