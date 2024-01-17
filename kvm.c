@@ -1,10 +1,6 @@
 #include "kvm.h"
 #include <stdio.h>
-
-static int sys_fd;
-static int vm_fd;
-static int vcpu_fd;
-struct kvm_run *runs;
+#include <unistd.h>
 
 void initram(void *ram) {
     struct kvm_userspace_memory_region mem = {
@@ -14,8 +10,7 @@ void initram(void *ram) {
         .memory_size = 1024 * 1024 * 100,
         .userspace_addr = (uint64_t)ram,
     };
-    int ret = ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &mem);
-    printf("KVM_SET_USER_MEMORY_REGION (%d)\r\n", ret);
+    ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &mem);
 }
 
 void readfile(char *filename, uint8_t *buffer) {
@@ -29,225 +24,67 @@ void readfile(char *filename, uint8_t *buffer) {
     close(fd);
 }
 
+
+
 void arch_init() {
-
-}
-
-void die(char *demo) {
-
-}
-
-void kvm_cpu__show_registers()
-{
+	// register sbi support
 	struct kvm_one_reg reg;
-	unsigned long data;
-	struct kvm_riscv_core core;
-
+	unsigned long data = KVM_REG_RISCV_SBI_MULTI_MASK(0);
+	reg.id   = RISCV_SBI_EXT_REG(KVM_REG_RISCV_SBI_SINGLE, 0);
 	reg.addr = (unsigned long)&data;
 
-	reg.id		= RISCV_CORE_REG(mode);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (mode)");
-	core.mode = data;
+	// dump reg.id reg.addr
+	printf("reg.id: %x\r\n", reg.id);
+	printf("reg.addr: %x\r\n", data);
 
-	reg.id		= RISCV_CORE_REG(regs.pc);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (pc)");
-	core.regs.pc = data;
+	if (ioctl(vcpu_fd, KVM_SET_ONE_REG, &reg) < 0) {
+		die("KVM_GET_ONE_REG");
+	}
 
-	reg.id		= RISCV_CORE_REG(regs.ra);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (ra)");
-	core.regs.ra = data;
+}
 
-	reg.id		= RISCV_CORE_REG(regs.sp);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (sp)");
-	core.regs.sp = data;
-
-	reg.id		= RISCV_CORE_REG(regs.gp);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (gp)");
-	core.regs.gp = data;
-
-	reg.id		= RISCV_CORE_REG(regs.tp);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (tp)");
-	core.regs.tp = data;
-
-	reg.id		= RISCV_CORE_REG(regs.t0);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (t0)");
-	core.regs.t0 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.t1);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (t1)");
-	core.regs.t1 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.t2);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (t2)");
-	core.regs.t2 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.s0);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (s0)");
-	core.regs.s0 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.s1);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (s1)");
-	core.regs.s1 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.a0);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (a0)");
-	core.regs.a0 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.a1);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (a1)");
-	core.regs.a1 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.a2);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (a2)");
-	core.regs.a2 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.a3);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (a3)");
-	core.regs.a3 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.a4);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (a4)");
-	core.regs.a4 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.a5);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (a5)");
-	core.regs.a5 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.a6);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (a6)");
-	core.regs.a6 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.a7);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (a7)");
-	core.regs.a7 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.s2);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (s2)");
-	core.regs.s2 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.s3);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (s3)");
-	core.regs.s3 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.s4);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (s4)");
-	core.regs.s4 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.s5);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (s5)");
-	core.regs.s5 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.s6);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (s6)");
-	core.regs.s6 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.s7);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (s7)");
-	core.regs.s7 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.s8);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (s8)");
-	core.regs.s8 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.s9);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (s9)");
-	core.regs.s9 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.s10);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (s10)");
-	core.regs.s10 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.s11);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (s11)");
-	core.regs.s11 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.t3);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (t3)");
-	core.regs.t3 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.t4);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (t4)");
-	core.regs.t4 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.t5);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (t5)");
-	core.regs.t5 = data;
-
-	reg.id		= RISCV_CORE_REG(regs.t6);
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (t6)");
-	core.regs.t6 = data;
-
-	printf("\n General Purpose Registers:\n");
-	printf(  " -------------------------\n");
-	printf(" MODE:  0x%lx\n", data);
-	printf(" PC: 0x%016lx   RA: 0x%016lx SP: 0x%016lx GP: 0x%016lx\n",
-		core.regs.pc, core.regs.ra, core.regs.sp, core.regs.gp);
-	printf(" TP: 0x%016lx   T0: 0x%016lx T1: 0x%016lx T2: 0x%016lx\n",
-		core.regs.tp, core.regs.t0, core.regs.t1, core.regs.t2);
-	printf(" S0: 0x%016lx   S1: 0x%016lx A0: 0x%016lx A1: 0x%016lx\n",
-		core.regs.s0, core.regs.s1, core.regs.a0, core.regs.a1);
-	printf(" A2: 0x%016lx   A3: 0x%016lx A4: 0x%016lx A5: 0x%016lx\n",
-		core.regs.a2, core.regs.a3, core.regs.a4, core.regs.a5);
-	printf(" A6: 0x%016lx   A7: 0x%016lx S2: 0x%016lx S3: 0x%016lx\n",
-		core.regs.a6, core.regs.a7, core.regs.s2, core.regs.s3);
-	printf(" S4: 0x%016lx   S5: 0x%016lx S6: 0x%016lx S7: 0x%016lx\n",
-		core.regs.s4, core.regs.s5, core.regs.s6, core.regs.s7);
-	printf(" S8: 0x%016lx   S9: 0x%016lx S10: 0x%016lx S11: 0x%016lx\n",
-		core.regs.s8, core.regs.s9, core.regs.s10, core.regs.s11);
-	printf(" T3: 0x%016lx   T4: 0x%016lx T5: 0x%016lx T6: 0x%016lx\n",
-		core.regs.t3, core.regs.t4, core.regs.t5, core.regs.t6);
+int emulate_sbi (unsigned long eid, unsigned long fid, unsigned long arg) {
+	int ret = -1;
+	// printf("eid: %d, fid: %d, arg: %x %d\r\n", eid, fid, arg, eid == 1);
+	if(eid == 1) {
+		printf("%c",(char)arg);
+		ret = 0;
+	} else if (eid == 0x8) {
+		is_runing = 0;
+	}
+	return ret;
 }
 
 void add_pc() {
 	struct kvm_one_reg reg;
-	unsigned long epc;
-	reg.id		= RISCV_CORE_REG(regs.pc);
-	reg.addr	= &epc;
-	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0)
-		die("KVM_GET_ONE_REG failed (pc)");
-	
-	printf("epc: 0x%lx\r\n", epc);
-	epc += 2;
-	reg.id		= RISCV_CORE_REG(regs.pc);
-	reg.addr	= &epc;
-	int ret = ioctl(vcpu_fd, KVM_SET_ONE_REG, &reg);
-	printf("KVM_SET_ONE_REG (%d)\r\n", ret);
+	unsigned long data = 0;
+	reg.id   = RISCV_CORE_REG(regs.pc);;
+	reg.addr = (unsigned long)&data;
+	if (ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg) < 0) {
+		die("KVM_GET_ONE_REG");
+	}
+	reg.addr = (unsigned long)&data;
+	if (ioctl(vcpu_fd, KVM_SET_ONE_REG, &reg) < 0) {
+		die("KVM_GET_ONE_REG");
+	}
+}
 
-	ioctl(vcpu_fd, KVM_GET_ONE_REG, &reg);
-	printf("Set Result epc: 0x%lx\r\n", epc);
+static int num = 0;
+static int len = 19;
+char *message = "Read From CharDev!\n";
+
+// _len always 1
+void do_chrdev(int is_write, unsigned char *data, int _len) {
+	if(is_write) {
+		printf("%c",data[0]);
+	} else {
+		if(num < len) {
+			data[0] = message[num];
+			num++;
+		} else {
+			data[0] = 0;
+		}
+	}
 }
 
 int main(void) {
@@ -262,37 +99,42 @@ int main(void) {
 
     runs = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, vcpu_fd, 0);
 
-    printf("%d\r\n", mmap_size);
-
     printf("KVM (%d), VMDF (%d), VCPU (%d)\r\n", sys_fd, vm_fd, vcpu_fd);
 
     initram(ram);
 
-    readfile("demo.bin", ram);
+    readfile("app.bin", ram);
+
     arch_init();
 
-	printf("Start Reason: %d\r\n", runs->exit_reason);
-    while(1) {
+	kvm_cpu__show_csrs();
+
+	kvm_cpu__show_registers();
+
+	printf("\r\nKVM RUN:\r\n\r\n");
+
+    while(is_runing) {
         ioctl(vcpu_fd, KVM_RUN, 0);
 		switch (runs->exit_reason) {
 			case KVM_EXIT_MMIO:
-				//printf("==========KVM_EXIT_MMIO==========\r\n");
-				// dump runs.mmio
-				//printf("PhyAddr: 0x%x\r\n", runs->mmio.phys_addr);
-				int i;
-				if (runs->mmio.is_write)
-					printf("%c",runs->mmio.data[0]);
-
-				//kvm_cpu__show_registers();
-				// add_pc();
-				//printf("================================\r\n");
+				do_chrdev(runs->mmio.is_write, runs->mmio.data, runs->mmio.len);
+				break;
+			case KVM_EXIT_RISCV_SBI:
+				emulate_sbi(runs->riscv_sbi.extension_id, runs->riscv_sbi.function_id, runs->riscv_sbi.args[0]);
+				add_pc();
+				break;
+			case KVM_EXIT_SYSTEM_EVENT:
+				is_runing = 0;
 				break;
 			default:
+				printf("==========KVM_EXIT_UNKNOWN==========\r\n");
+				printf("Exit Reason: %d\r\n", runs->exit_reason);
+				kvm_cpu__show_csrs();
 				kvm_cpu__show_registers();
+				is_runing = 0;
 				break;
 		}
-        // printf("Exit Reason: %d\r\n", runs->exit_reason);
-        // pause
     }
-	__builtin_unreachable();
+	printf("\r\nKVM END\r\n");
+	return 0;
 }

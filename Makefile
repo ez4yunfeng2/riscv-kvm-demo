@@ -1,25 +1,24 @@
 PREFIX=riscv64-unknown-linux-gnu-
 CC=$(PREFIX)gcc
 CFLAGS+=-Wall -static
-kernel:
-	$(PREFIX)gcc -nostartfiles -T demo.lds demo.c -o output/demo
-	$(PREFIX)objcopy -O binary --strip-all output/demo output/demo.bin
 
-demo:
-	$(PREFIX)gcc -mcmodel=medany -nostartfiles -T demo.lds demo.S -o output/demo
-	$(PREFIX)objdump -d output/demo > output/demo.dis
-	$(PREFIX)objcopy -O binary --strip-all output/demo output/demo.bin
+app:
+	$(PREFIX)gcc -mcmodel=medany -nostartfiles main.c -c -o output/main.o
+	$(PREFIX)gcc -mcmodel=medany -nostartfiles entry.S -c -o output/entry.o
+	$(PREFIX)ld -T app.lds output/main.o output/entry.o -o output/app
+	$(PREFIX)objcopy -O binary --strip-all output/app output/app.bin
 
-build: kvm
-	@echo Build OK
+kvm: 
+	$(PREFIX)gcc -static kvm.c -o output/kvm
 
-fs: build demo
-	cp -f $(FILE) ../busybox-1.33.1-kvm-riscv64/_install/apps
-	cd ../busybox-1.33.1-kvm-riscv64/_install; find ./ | cpio -o -H newc > ../../rootfs_kvm_riscv64.img; cd -
+img: kvm app
+	cp output/kvm _install/apps
+	cp output/app.bin _install/apps
+	cd _install; find ./ | cpio -o -H newc > ../output/rootfs_kvm_riscv64.img; cd -
 
-run:
+run: img
 	../qemu/build/qemu-system-riscv64 \
 		-cpu rv64 -M virt -m 512M -nographic \
-		-kernel ../build-riscv64/arch/riscv/boot/Image \
-		-initrd ../rootfs_kvm_riscv64.img \
+		-kernel output/Image \
+		-initrd output/rootfs_kvm_riscv64.img \
 		-append "root=/dev/ram rw console=ttyS0 earlycon=sbi"
